@@ -14,7 +14,8 @@
 #include <map>
 
 using std::map;
-using std::set; 
+using std::set;
+
 
 class XMLNode;
 class ResourceTable;
