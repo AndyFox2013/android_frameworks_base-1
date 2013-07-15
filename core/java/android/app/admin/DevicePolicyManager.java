@@ -1781,9 +1781,13 @@ public class DevicePolicyManager {
     /** @hide */
     public static final int SEPOLICY_FILE_SEAPPCTXS = 3;
     /** @hide */
+
     public static final int MMAC_POLICY_FILE = 4;
     /** @hide */
     public static final int SEPOLICY_FILE_COUNT = MMAC_POLICY_FILE+1;
+
+    public static final int SEPOLICY_FILE_COUNT = SEPOLICY_FILE_SEAPPCTXS+1;
+
 
     /**
      * Sets a new policy file and reloads it at the proper time.
