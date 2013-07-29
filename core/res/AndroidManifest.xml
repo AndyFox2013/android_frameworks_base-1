@@ -341,6 +341,12 @@
         android:permissionGroup="android.permission-group.PERSONAL_INFO"
         android:protectionLevel="signature|system" />
 
+    <!-- @hide Allows an application to change privacy guard state --> 
+    <permission android:name="android.permission.CHANGE_PRIVACY_GUARD_STATE"
+        android:label="@string/permlab_changePrivacyGuardState"
+        android:description="@string/permdesc_changePrivacyGuardState"
+        android:protectionLevel="signature" /> 
+
     <!-- Allows an application to read the user's call log.
          <p class="note"><strong>Note:</strong> If your app uses the
          {@link #READ_CONTACTS} permission and <em>both</em> your <a
@@ -1935,6 +1941,22 @@
         android:label="@string/permlab_broadcastPackageRemoved"
         android:description="@string/permdesc_broadcastPackageRemoved"
         android:protectionLevel="signature" />
+
+    <!-- Allows an application to cancel notifications from other apps
+         @hide --> 
+    <permission android:name="android.permission.CANCEL_NOTIFICATIONS"
+        android:permissionGroup="android.permission-group.SYSTEM_TOOLS"
+        android:protectionLevel="signature|system"
+        android:label="@string/permlab_cancelNotifications"
+        android:description="@string/permdesc_cancelNotifications" /> 
+
+    <!-- Allows an application to intercept and rewrite outgoing SMS
+         @hide -->
+    <permission android:name="android.permission.INTERCEPT_SMS"
+        android:permissionGroup="android.permission-group.MESSAGES"
+        android:label="@string/permlab_interceptSmsSent"
+        android:description="@string/permdesc_interceptSmsSent"
+        android:protectionLevel="signature" /> 
 
     <!-- Allows an application to broadcast an SMS receipt notification -->
     <permission android:name="android.permission.BROADCAST_SMS"
