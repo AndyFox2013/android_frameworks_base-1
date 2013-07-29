@@ -91,6 +91,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.IPowerManager;
 import android.os.IUserManager;
+import android.hardware.IIrdaManager;	
+import android.hardware.IrdaManager;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
@@ -573,6 +575,12 @@ class ContextImpl extends Context {
                     IFmTransmitter service = IFmTransmitter.Stub.asInterface(b);
                     return new FmTransmitterImpl(service);
                 }});
+	registerService(IRDA_SERVICE, new StaticServiceFetcher() {	
+			public Object createStaticService() {	
+			IBinder b = ServiceManager.getService(IRDA_SERVICE);	
+			IIrdaManager service = IIrdaManager.Stub.asInterface(b);	
+			return new IrdaManager(service);	
+			}});
     }
 
     static ContextImpl getImpl(Context context) {
@@ -1548,6 +1556,16 @@ class ContextImpl extends Context {
         }
         return new DropBoxManager(service);
     }
+
+    @Override
+    public boolean isPrivacyGuardEnabled() {
+        try {
+            return ActivityManagerNative.getDefault().isPrivacyGuardEnabledForProcess(Binder.getCallingPid());
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return false;
+    } 
 
     @Override
     public int checkPermission(String permission, int pid, int uid) {

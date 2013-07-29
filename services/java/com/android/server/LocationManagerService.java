@@ -56,12 +56,14 @@ import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Slog;
 
 import com.android.internal.content.PackageMonitor;
 import com.android.internal.location.ProviderProperties;
 import com.android.internal.location.ProviderRequest;
+import com.android.server.location.BtGpsLocationProvider;
 import com.android.server.location.GeocoderProxy;
 import com.android.server.location.GeofenceManager;
 import com.android.server.location.GpsLocationProvider;
@@ -181,6 +183,9 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
 
     // current active user on the device - other users are denied location data
     private int mCurrentUserId = UserHandle.USER_OWNER;
+
+    // reference for original internal gps location provider
+    private GpsLocationProvider mInternalGpsLocationProvider;
 
     public LocationManagerService(Context context) {
         super();
@@ -320,6 +325,41 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
                 + "partition. The fallback must also be marked coreApp=\"true\" in the manifest");
     }
 
+    public void setGpsSource(String device) {
+        synchronized (mLock) {
+            LocationProviderInterface gpsLocationProvider =
+                    mRealProviders.get(LocationManager.GPS_PROVIDER);
+            if (gpsLocationProvider != null && mProvidersByName.containsKey(
+                        gpsLocationProvider.getName())) {
+                Slog.i(TAG, "Disable and removing provider " + gpsLocationProvider.getName());
+                Settings.Secure.setLocationProviderEnabled(mContext.getContentResolver(),
+                        LocationManager.GPS_PROVIDER, false);
+                removeProviderLocked(gpsLocationProvider);
+                mRealProviders.put(LocationManager.GPS_PROVIDER, null);
+            }
+
+            if ("0".equals(device)) {
+                if (!GpsLocationProvider.isSupported()) {
+                    return;
+                }
+
+                GpsLocationProvider gpsProvider = mInternalGpsLocationProvider;
+
+                mGpsStatusProvider = gpsProvider.getGpsStatusProvider();
+                mNetInitiatedListener = gpsProvider.getNetInitiatedListener();
+                addProviderLocked(gpsProvider);
+                mRealProviders.put(LocationManager.GPS_PROVIDER, gpsProvider);
+            } else {
+                BtGpsLocationProvider gpsProvider = new BtGpsLocationProvider(mContext, this);
+                mGpsStatusProvider = gpsProvider.getGpsStatusProvider();
+                mNetInitiatedListener = gpsProvider.getNetInitiatedListener();
+                addProviderLocked(gpsProvider);
+                mRealProviders.put(LocationManager.GPS_PROVIDER, gpsProvider);
+            }
+            updateProvidersLocked();
+        }
+    }
+
     private void loadProvidersLocked() {
         // create a passive location provider, which is always enabled
         PassiveProvider passiveProvider = new PassiveProvider(this);
@@ -328,13 +368,19 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         mPassiveProvider = passiveProvider;
 
         if (GpsLocationProvider.isSupported()) {
-            // Create a gps location provider
-            GpsLocationProvider gpsProvider = new GpsLocationProvider(mContext, this);
-            mGpsStatusProvider = gpsProvider.getGpsStatusProvider();
-            mNetInitiatedListener = gpsProvider.getNetInitiatedListener();
-            addProviderLocked(gpsProvider);
-            mRealProviders.put(LocationManager.GPS_PROVIDER, gpsProvider);
+            mInternalGpsLocationProvider = new GpsLocationProvider(mContext, this);
         }
+
+        // Create a GPS location provider based on the setting EXTERNAL_GPS_BT_DEVICE
+        String btDevice = Settings.System.getString(mContext.getContentResolver(),
+                Settings.Secure.EXTERNAL_GPS_BT_DEVICE);
+        if (TextUtils.isEmpty(btDevice)) {
+            // Default option
+            btDevice = "0";
+            Settings.System.putString(mContext.getContentResolver(),
+                    Settings.Secure.EXTERNAL_GPS_BT_DEVICE, btDevice);
+        }
+        setGpsSource(btDevice);
 
         /*
         Load package name(s) containing location provider support.
@@ -664,7 +710,6 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         mProvidersByName.remove(provider.getName());
     }
 
-
     private boolean isAllowedBySettingsLocked(String provider, int userId) {
         if (userId != mCurrentUserId) {
             return false;
@@ -826,7 +871,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
      */
     @Override
     public List<String> getProviders(Criteria criteria, boolean enabledOnly) {
-        int allowedResolutionLevel = getCallerAllowedResolutionLevel();
+	int allowedResolutionLevel = getCallerAllowedResolutionLevel();
         ArrayList<String> out;
         int callingUserId = UserHandle.getCallingUserId();
         long identity = Binder.clearCallingIdentity();
@@ -982,7 +1027,8 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
 
         if (records != null) {
             for (UpdateRecord record : records) {
-                if (UserHandle.getUserId(record.mReceiver.mUid) == mCurrentUserId) {
+                if (UserHandle.getUserId(record.mReceiver.mUid) == mCurrentUserId &&
+                        !mBlacklist.isBlacklisted(record.mReceiver.mPackageName)) { 
                     LocationRequest locationRequest = record.mRequest;
                     providerRequest.locationRequests.add(locationRequest);
                     if (locationRequest.getInterval() < providerRequest.interval) {
@@ -1230,7 +1276,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         }
 
         boolean isProviderEnabled = isAllowedBySettingsLocked(name, UserHandle.getUserId(uid));
-        if (isProviderEnabled) {
+        if (isProviderEnabled) {  
             applyRequirementsLocked(name);
         } else {
             // Notify the listener that updates are currently disabled
@@ -1244,7 +1290,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         checkPackageName(packageName);
 
         final int pid = Binder.getCallingPid();
-        final int uid = Binder.getCallingUid();
+	final int uid = Binder.getCallingUid();
         Receiver receiver = checkListenerOrIntent(listener, intent, pid, uid, packageName);
 
         // providers may use public location API's, need to clear identity
@@ -1303,7 +1349,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         checkResolutionLevelIsSufficientForProviderUse(allowedResolutionLevel,
                 request.getProvider());
         // no need to sanitize this request, as only the provider name is used
-
+	
         long identity = Binder.clearCallingIdentity();
         try {
             if (mBlacklist.isBlacklisted(packageName)) {
@@ -1355,7 +1401,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
 
         if (D) Log.d(TAG, "requestGeofence: " + sanitizedRequest + " " + geofence + " " + intent);
 
-        // geo-fence manager uses the public location API, need to clear identity
+	// geo-fence manager uses the public location API, need to clear identity
         int uid = Binder.getCallingUid();
         if (UserHandle.getUserId(uid) != UserHandle.USER_OWNER) {
             // temporary measure until geofences work for secondary users
@@ -1378,7 +1424,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
 
         if (D) Log.d(TAG, "removeGeofence: " + geofence + " " + intent);
 
-        // geo-fence manager uses the public location API, need to clear identity
+	// geo-fence manager uses the public location API, need to clear identity
         long identity = Binder.clearCallingIdentity();
         try {
             mGeofenceManager.removeFence(geofence, intent);
@@ -1396,7 +1442,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         checkResolutionLevelIsSufficientForProviderUse(getCallerAllowedResolutionLevel(),
                 LocationManager.GPS_PROVIDER);
 
-        try {
+	try {
             mGpsStatusProvider.addGpsStatusListener(listener);
         } catch (RemoteException e) {
             Slog.e(TAG, "mGpsStatusProvider.addGpsStatusListener failed", e);
@@ -1425,7 +1471,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         checkResolutionLevelIsSufficientForProviderUse(getCallerAllowedResolutionLevel(),
                 provider);
 
-        // and check for ACCESS_LOCATION_EXTRA_COMMANDS
+	// and check for ACCESS_LOCATION_EXTRA_COMMANDS
         if ((mContext.checkCallingOrSelfPermission(ACCESS_LOCATION_EXTRA_COMMANDS)
                 != PackageManager.PERMISSION_GRANTED)) {
             throw new SecurityException("Requires ACCESS_LOCATION_EXTRA_COMMANDS permission");
@@ -1445,7 +1491,8 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
             throw new SecurityException(
                     "calling sendNiResponse from outside of the system is not allowed");
         }
-        try {
+
+	try {
             return mNetInitiatedListener.sendNiResponse(notifId, userResponse);
         } catch (RemoteException e) {
             Slog.e(TAG, "RemoteException in LocationManagerService.sendNiResponse");
@@ -1467,7 +1514,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
         checkResolutionLevelIsSufficientForProviderUse(getCallerAllowedResolutionLevel(),
                 provider);
 
-        LocationProviderInterface p;
+	LocationProviderInterface p;
         synchronized (mLock) {
             p = mProvidersByName.get(provider);
         }
@@ -1482,7 +1529,7 @@ public class LocationManagerService extends ILocationManager.Stub implements Run
                 provider);
         if (LocationManager.FUSED_PROVIDER.equals(provider)) return false;
 
-        long identity = Binder.clearCallingIdentity();
+	long identity = Binder.clearCallingIdentity();
         try {
             synchronized (mLock) {
                 LocationProviderInterface p = mProvidersByName.get(provider);

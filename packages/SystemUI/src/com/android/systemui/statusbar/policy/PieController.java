@@ -102,6 +102,7 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
     private Context mContext;
     private PieManager mPieManager;
     private PieView mPieContainer;
+    private boolean mIsDetaching = false; 
     /**
      * This is only needed for #toggleRecentApps() and #showSearchPanel()
      */
@@ -145,12 +146,12 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
                 // restore listener state immediately (after the bookkeeping), and since the
                 // search panel is a single gesture we will not trigger again
                 mHandler.obtainMessage(MSG_PIE_RESTORE_LISTENER_STATE).sendToTarget();
-            } else if (mPieContainer != null) {
-                // set the snap points depending on current trigger and mask
-                mPieContainer.setSnapPoints(mPieTriggerMask & ~mPieTriggerSlots);
-                activateFromListener(touchX, touchY, position);
+	    } else if (mPieContainer != null && activateFromListener(touchX, touchY, position)) {                 
                 // give the main thread some time to do the bookkeeping
                 mHandler.obtainMessage(MSG_PIE_GAIN_FOCUS).sendToTarget();
+	    } else {
+                // if anything goes wrong, just quit the ongoing activation
+                mPieActivationListener.restoreListenerState(); 
             }
         }
     };
@@ -168,8 +169,12 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
                             InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
                     break;
                 case MSG_PIE_GAIN_FOCUS:
-                    if (!mPieActivationListener.gainTouchFocus(mPieContainer.getWindowToken())) {
-                        mPieContainer.exit();
+                    if (mPieContainer != null) {
+                        if (!mPieActivationListener.gainTouchFocus(mPieContainer.getWindowToken())) {
+                            mPieContainer.exit();
+                        }
+                    } else {
+                        mPieActivationListener.restoreListenerState(); 
                     }
                     break;
                 case MSG_PIE_RESTORE_LISTENER_STATE:
@@ -205,33 +210,33 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
             ContentResolver resolver = mContext.getContentResolver();
             // trigger setupNavigationItems()
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.PIE_COLORS), false, this);
+                    Settings.System.PIE_COLORS), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.NAV_BUTTONS), false, this);
+                    Settings.System.NAV_BUTTONS), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.Secure.getUriFor(
-                    Settings.Secure.KILL_APP_LONGPRESS_BACK), false, this);
+                    Settings.Secure.KILL_APP_LONGPRESS_BACK), false, this, UserHandle.USER_ALL);
             // trigger setupContainer()
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.PIE_CONTROLS), false, this);
+                    Settings.System.PIE_CONTROLS), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.EXPANDED_DESKTOP_STATE), false, this);
+                    Settings.System.EXPANDED_DESKTOP_STATE), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.EXPANDED_DESKTOP_STYLE), false, this);
+                    Settings.System.EXPANDED_DESKTOP_STYLE), false, this, UserHandle.USER_ALL);
             // trigger setupListener()
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.PIE_POSITIONS), false, this);
+                    Settings.System.PIE_POSITIONS), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.PIE_SENSITIVITY), false, this);
+                    Settings.System.PIE_SENSITIVITY), false, this, UserHandle.USER_ALL);
         }
 
         @Override
         public void onChange(boolean selfChange) {
             ContentResolver resolver = mContext.getContentResolver();
-            boolean expanded = Settings.System.getInt(resolver,
-                    Settings.System.EXPANDED_DESKTOP_STATE, 0) == 1;
+            boolean expanded = Settings.System.getIntForUser(resolver,
+                    Settings.System.EXPANDED_DESKTOP_STATE, 0, UserHandle.USER_CURRENT) == 1; 
             if (expanded) {
-                mExpandedDesktopState = Settings.System.getInt(resolver,
-                        Settings.System.EXPANDED_DESKTOP_STYLE, 0);
+                mExpandedDesktopState = Settings.System.getIntForUser(resolver,
+                        Settings.System.EXPANDED_DESKTOP_STYLE, 0, UserHandle.USER_CURRENT); 
             } else {
                 mExpandedDesktopState = 0;
             }
@@ -239,8 +244,11 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
                 setupContainer();
                 setupNavigationItems();
                 setupListener();
-            } else {
+            } else if (!isShowing()) { 
                 detachContainer();
+	    } else {
+                // delay detach to #onExit()
+                mIsDetaching = true; 
             }
         }
     }
@@ -296,21 +304,8 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
         mSettingsObserver.onChange(true);
     }
 
-    private void detachContainer() {
-        if (mPieContainer == null) {
-            return;
-        }
-
-        mPieManager.updatePieActivationListener(mPieActivationListener, 0);
-
-        if (mTelephonyManager != null) {
-            mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
-        }
-
-        mContext.unregisterReceiver(mBroadcastReceiver);
-
-        mPieContainer.clearSlices();
-        mPieContainer = null;
+    public void userSwitched(int newUserId) {
+        mSettingsObserver.onChange(true);
     }
 
     public void attachStatusBar(BaseStatusBar statusBar) {
@@ -353,14 +348,41 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
         mPieContainer.addSlice(mSysInfo);
     }
 
+    @Override
+    public void onExit() {
+        mWindowManager.removeView(mPieContainer);
+        mPieActivationListener.restoreListenerState();
+        if (mIsDetaching) {
+            detachContainer();
+            mIsDetaching = false;
+        }
+    }
+
+    private void detachContainer() {
+        if (mPieContainer == null) {
+            return;
+        }
+
+        mPieManager.updatePieActivationListener(mPieActivationListener, 0);
+
+        if (mTelephonyManager != null) {
+            mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
+        }
+
+        mContext.unregisterReceiver(mBroadcastReceiver);
+
+        mPieContainer.clearSlices();
+        mPieContainer = null;
+    } 
+
     private void setupListener() {
         ContentResolver resolver = mContext.getContentResolver();
 
-        mPieTriggerSlots = Settings.System.getInt(resolver,
-                Settings.System.PIE_POSITIONS, PiePosition.BOTTOM.FLAG);
+        mPieTriggerSlots = Settings.System.getIntForUser(resolver,
+                Settings.System.PIE_POSITIONS, PiePosition.BOTTOM.FLAG, UserHandle.USER_CURRENT); 
 
-        int sensitivity = Settings.System.getInt(resolver,
-                Settings.System.PIE_SENSITIVITY, 3);
+        int sensitivity = Settings.System.getIntForUser(resolver,
+                Settings.System.PIE_SENSITIVITY, 3, UserHandle.USER_CURRENT); 
         if (sensitivity < PieServiceConstants.SENSITIVITY_LOWEST
                 || sensitivity > PieServiceConstants.SENSITIVITY_HIGHEST) {
             sensitivity = PieServiceConstants.SENSITIVITY_DEFAULT;
@@ -373,8 +395,8 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
 
     private void setupNavigationItems() {
         int minimumImageSize = (int)mContext.getResources().getDimension(R.dimen.pie_item_size);
-        boolean killAppLongPress = Settings.Secure.getInt(mContext.getContentResolver(),
-                Settings.Secure.KILL_APP_LONGPRESS_BACK, 0) == 1;
+        boolean killAppLongPress = Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                Settings.Secure.KILL_APP_LONGPRESS_BACK, 0, UserHandle.USER_CURRENT) == 1; 
         ButtonInfo[] buttons = NavigationButtons.loadButtonMap(mContext);
         PieColorSettings colorSettings = PieColorUtils.loadPieColors(mContext, mContext.getResources());
 
@@ -429,7 +451,6 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
                 return item;
             }
         }
-
         return null;
     }
 
@@ -440,15 +461,20 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
         }
     }
 
-    public void activateFromListener(int touchX, int touchY, PiePosition position) {
-        if (!isShowing()) {
-            doHapticTriggerFeedback();
-
-            mPosition = position;
-            Point center = new Point(touchX, touchY);
-            mPieContainer.activate(center, position);
-            mWindowManager.addView(mPieContainer, generateLayoutParam());
+    public boolean activateFromListener(int touchX, int touchY, PiePosition position) {
+        if (isShowing()) {
+            return false; 
         }
+
+	doHapticTriggerFeedback();
+
+        mPosition = position;
+        Point center = new Point(touchX, touchY);
+        mPieContainer.setSnapPoints(mPieTriggerMask & ~mPieTriggerSlots);
+        mPieContainer.activate(center, position);
+        mWindowManager.addView(mPieContainer, generateLayoutParam());
+
+        return true; 
     }
 
     private WindowManager.LayoutParams generateLayoutParam() {
@@ -461,6 +487,7 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                 PixelFormat.TRANSLUCENT);
+	lp.privateFlags = WindowManager.LayoutParams.PRIVATE_FLAG_FORCE_SHOW_NAV_BAR; 
         // This title is for debugging only. See: dumpsys window
         lp.setTitle("PieControlPanel");
         lp.windowAnimations = android.R.style.Animation;
@@ -468,18 +495,12 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
         return lp;
     }
 
-    @Override
-    public void onExit() {
-        mWindowManager.removeView(mPieContainer);
-        mPieActivationListener.restoreListenerState();
-    }
-
     public void updatePieTriggerMask(int newMask) {
         int oldState = mPieTriggerSlots & mPieTriggerMask;
         mPieTriggerMask = newMask;
 
-        // first we check, if it would make a change
-        if ((mPieTriggerSlots & mPieTriggerMask) != oldState) {
+        // check if we are active and if it would make a change at all
+        if (mPieContainer != null && ((mPieTriggerSlots & mPieTriggerMask) != oldState)) { 
             setupListener();
         }
     }
@@ -579,13 +600,13 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
             Slog.d(TAG, "onSnap from " + position.name());
         }
 
-        int triggerSlots = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.PIE_POSITIONS, PiePosition.BOTTOM.FLAG);
+        int triggerSlots = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.PIE_POSITIONS, PiePosition.BOTTOM.FLAG, UserHandle.USER_CURRENT);
 
         triggerSlots = triggerSlots & ~mPosition.FLAG | position.FLAG;
 
-        Settings.System.putInt(mContext.getContentResolver(),
-                Settings.System.PIE_POSITIONS, triggerSlots);
+        Settings.System.putIntForUser(mContext.getContentResolver(),
+                Settings.System.PIE_POSITIONS, triggerSlots, UserHandle.USER_CURRENT); 
     }
 
     @Override
@@ -673,7 +694,7 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
     }
 
     public boolean isShowing() {
-        return mPieContainer.isShowing();
+        return mPieContainer != null && mPieContainer.isShowing(); 
     }
 
     public boolean isSearchLightEnabled() {
@@ -681,8 +702,8 @@ public class PieController implements BaseStatusBar.NavigationBarCallback, PieVi
     }
 
     public boolean isEnabled() {
-        int pie = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.PIE_CONTROLS, 0);
+        int pie = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.PIE_CONTROLS, 0, UserHandle.USER_CURRENT); 
 
         return (pie == 1 && mExpandedDesktopState != 0) || pie == 2;
     }

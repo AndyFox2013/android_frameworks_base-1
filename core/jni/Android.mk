@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 LOCAL_CFLAGS += -DHAVE_CONFIG_H -DKHTML_NO_EXCEPTIONS -DGKWQ_NO_JAVA
 LOCAL_CFLAGS += -DNO_SUPPORT_JS_BINDING -DQT_NO_WHEELEVENT -DKHTML_NO_XBL
 LOCAL_CFLAGS += -U__APPLE__
+LOCAL_CFLAGS += -fno-strict-aliasing
 
 ifeq ($(TARGET_ARCH), arm)
 	LOCAL_CFLAGS += -DPACKED="__attribute__ ((packed))"
@@ -165,7 +166,8 @@ LOCAL_C_INCLUDES += \
 	$(call include-path-for, bluedroid) \
 	$(call include-path-for, libhardware)/hardware \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
- $(TOP)/frameworks/av/include \
+        $(TOP)/frameworks/av/include \
+  	external/e2fsprogs/lib \
 	external/skia/include/core \
 	external/skia/include/effects \
 	external/skia/include/images \
@@ -189,6 +191,7 @@ LOCAL_C_INCLUDES += \
 LOCAL_SHARED_LIBRARIES := \
 	libandroidfw \
 	libexpat \
+	libext2_blkid \
 	libnativehelper \
 	libcutils \
 	libutils \

@@ -65,15 +65,24 @@
     <string name="quick_settings_lte">LTE</string>
     <string name="quick_settings_lte_off">LTE off</string>
     <string name="quick_settings_volume">Volume</string>
+    <string name="quick_settings_camera_label">Camera</string>
+    <string name="quick_settings_reboot">Reboot System</string>
+    <string name="quick_settings_reboot_recovery">Reboot Recovery</string>  
 
     <!-- Expanded desktop strings break the rules a bit - the icon identifies the feature, the string indicates current state -->
     <string name="quick_settings_expanded_desktop">Expanded</string>
     <string name="quick_settings_expanded_desktop_off">Normal</string>
 
+    <!-- Camera tile toasts -->
+    <string name="quick_settings_camera_error_connect">Can\'t connect to camera</string>
+
     <!-- Text to display next to the minimal graphical battery meter.  [CHAR LIMIT=3] -->
     <string name="status_bar_settings_battery_meter_min_format" translatable="false">
         <xliff:g id="number">%d</xliff:g>
     </string>
+
+    <!-- Label in drop down to identify brightness slider -->
+    <string name="brightness_label">Brightness</string>
 
     <!-- Dialog title for navigation bar button selection -->
     <string name="navbar_dialog_title">Choose action to assign</string>
@@ -95,4 +104,24 @@
     <string name="pie_phone_status_no_service">No service</string>
     <string name="pie_phone_status_airplane_mode">Airplane mode on</string>
     <string name="pie_phone_status_emergency_only">Emergency calls only</string>
+
+    <!-- Title shown in recents popup for showing app in floating mode --> 
+    <string name="status_bar_recent_floating_item_title">Floating mode</string>
+
+    <string name="halo_dismiss">Dismiss notification</string>
+    <string name="halo_hide">Hide HALO</string>
+    <string name="halo_clear_all">Clear all notifications</string>
+    <string name="halo_silence">Hide and silence HALO until woken up</string>
+    <string name="halo_tutorial1">I am HALO.</string>
+    <string name="halo_tutorial2">Double-tap-drag to move me around, drag to task.</string>
+    <string name="halo_tutorial3">Change my behavior in the settings.</string>
+
+    <!-- App sidebar -->
+    <string name="default_folder_text">Folder</string>
+    <string name="title_activity_sidebar_configuration">Appbar content setup</string>
+    <string name="action_save">Save</string>
+    <string name="toast_items_saved">Appbar items have been saved.</string>
+    <string name="content_setup_instructions">Add items to the Appbar by long pressing any item on the right and drag it over to the Appbar.\n\nCombine items into folders by droping an item onto any existing item in the Appbar.\n\nTo remove an item simply drag it out of the \@appbar.</string>
+    <string name="content_setup_dismiss">Continue</string>
+
 </resources>

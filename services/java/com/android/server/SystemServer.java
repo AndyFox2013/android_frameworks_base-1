@@ -74,10 +74,7 @@ import com.android.server.wm.WindowManagerService;
 import dalvik.system.VMRuntime;
 import dalvik.system.Zygote;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import com.stericsson.hardware.fm.FmReceiverService;
@@ -87,9 +84,6 @@ class ServerThread extends Thread {
     private static final String TAG = "SystemServer";
     private static final String ENCRYPTING_STATE = "trigger_restart_min_framework";
     private static final String ENCRYPTED_STATE = "1";
-
-    public static final String FAST_CHARGE_DIR = "/sys/kernel/fast_charge";
-    public static final String FAST_CHARGE_FILE = "force_fast_charge";
 
     ContentResolver mContentResolver;
 
@@ -828,6 +822,16 @@ class ServerThread extends Thread {
             }
 
             if (context.getResources().getBoolean(
+		com.android.internal.R.bool.config_enableIrdaManagerService)) {
+		try {
+		    Slog.i(TAG, "IrdaManager Service");	
+		    ServiceManager.addService("irda", new IrdaManagerService(context));
+		} catch (Throwable e) {
+		    Slog.e(TAG, "Failure starting Irda Service", e);
+		}
+	    }
+		
+	    if (context.getResources().getBoolean(
                     com.android.internal.R.bool.config_allowPieService)) {
                 try {
                     Slog.i(TAG, "Pie Delivery Service");
@@ -1123,24 +1127,6 @@ class ServerThread extends Thread {
     }
 
     static final void startSystemUi(Context context) {
-
-        // restore fast charge state before starting systemui
-        boolean enabled = Settings.System.getInt(context.getContentResolver(), Settings.System.FCHARGE_ENABLED, 0) == 1;
-            try {
-                    File fastcharge = new File(FAST_CHARGE_DIR, FAST_CHARGE_FILE);
-                    if (fastcharge.exists()) {
-                        FileWriter fwriter = new FileWriter(fastcharge);
-                        BufferedWriter bwriter = new BufferedWriter(fwriter);
-                        bwriter.write(enabled ? "1" : "0");
-                        bwriter.close();
-                    } else {
-                        Log.e("FChargeToggle", "No fast charge support");
-                    }
-                } catch (IOException e) {
-                    Log.e("FChargeToggle", "Couldn't write fast_charge file");
-                    Settings.System.putInt(context.getContentResolver(),
-                         Settings.System.FCHARGE_ENABLED, 0);
-                }
 
         Intent intent = new Intent();
         intent.setComponent(new ComponentName("com.android.systemui",
