@@ -1,18 +1,18 @@
 /*
- * Copyright (C) 2006 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2006 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package com.android.systemui.statusbar.policy;
 
@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.os.Handler;
+import android.os.UserHandle; 
 import android.provider.Settings;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -42,21 +43,22 @@ import java.util.Date;
 import java.util.TimeZone;
 
 /**
- * Digital clock for the status bar.
- */
+* Digital clock for the status bar.
+*/
 public class Clock extends TextView {
 
     private Locale mLocale;
+    private boolean mHidden; 
     protected boolean mAttached;
     protected Calendar mCalendar;
     protected String mClockFormatString;
     protected SimpleDateFormat mClockFormat;
 
 
-    public static final int AM_PM_STYLE_NORMAL  = 0;
-    public static final int AM_PM_STYLE_SMALL   = 1;
-    public static final int AM_PM_STYLE_GONE    = 2;
-    public static final int PROTEKK_O_CLOCK     = 3;
+    public static final int AM_PM_STYLE_NORMAL = 0;
+    public static final int AM_PM_STYLE_SMALL = 1;
+    public static final int AM_PM_STYLE_GONE = 2;
+    public static final int PROTEKK_O_CLOCK = 3;
 
     public static final int CLOCK_DATE_DISPLAY_GONE = 0;
     public static final int CLOCK_DATE_DISPLAY_SMALL = 1;
@@ -70,15 +72,16 @@ public class Clock extends TextView {
 
     protected int mClockDateStyle = CLOCK_DATE_STYLE_UPPERCASE;
 
-    public static final int STYLE_CLOCK_RIGHT   = 0;
-    public static final int STYLE_CLOCK_CENTER  = 1;
+    public static final int STYLE_CLOCK_RIGHT = 0;
+    public static final int STYLE_CLOCK_CENTER = 1;
 
     protected int mClockStyle = STYLE_CLOCK_RIGHT;
 
     protected int mClockColor = com.android.internal.R.color.holo_blue_light;
 
     private int mAmPmStyle = AM_PM_STYLE_GONE;
-    public boolean mShowClock;
+    public boolean mShowClock; 
+    //public boolean mShowClock;
 
     Handler mHandler;
 
@@ -118,6 +121,11 @@ public class Clock extends TextView {
             updateSettings();
         }
     }
+
+    public void setHidden(boolean hidden) {
+        mHidden = hidden;
+        updateClockVisibility();
+    } 
 
     public Clock(Context context) {
         this(context, null);
@@ -213,10 +221,10 @@ public class Clock extends TextView {
         String format = context.getString(res);
         if (!format.equals(mClockFormatString)) {
             /*
-             * Search for an unquoted "a" in the format string, so we can
-             * add dummy characters around it to let us find it again after
-             * formatting and change its size.
-             */
+* Search for an unquoted "a" in the format string, so we can
+* add dummy characters around it to let us find it again after
+* formatting and change its size.
+*/
             if (mAmPmStyle != AM_PM_STYLE_NORMAL) {
                 int a = -1;
                 boolean quoted = false;
@@ -310,11 +318,9 @@ public class Clock extends TextView {
         return formatted;
     }
 
-    protected void updateSettings() {
+    public void updateSettings() {
         ContentResolver resolver = mContext.getContentResolver();
-        int defaultColor = getResources().getColor(
-                com.android.internal.R.color.holo_blue_light);
-
+        
         mShowClock = (Settings.System.getInt(resolver,
                 Settings.System.STATUS_BAR_CLOCK, 1) == 1);
 
@@ -337,9 +343,12 @@ public class Clock extends TextView {
         mClockDateStyle = Settings.System.getInt(resolver,
                 Settings.System.STATUSBAR_CLOCK_DATE_STYLE, CLOCK_DATE_STYLE_UPPERCASE);
 
+	int defaultColor = getResources().getColor(
+                com.android.internal.R.color.holo_blue_light);
         mClockColor = Settings.System.getInt(resolver,
-                Settings.System.STATUSBAR_CLOCK_COLOR, defaultColor);
-        if (mClockColor == Integer.MIN_VALUE) {
+                Settings.System.STATUSBAR_CLOCK_COLOR, -2);
+        if (mClockColor == Integer.MIN_VALUE
+                || mClockColor == -2) {
             // flag to reset the color
             mClockColor = defaultColor;
         }
@@ -349,11 +358,13 @@ public class Clock extends TextView {
     }
 
     protected void updateClockVisibility() {
-        if (mClockStyle == STYLE_CLOCK_RIGHT && mShowClock)
+	boolean showClock = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_CLOCK, 1, UserHandle.USER_CURRENT) == 1;
+        setVisibility(showClock && !mHidden ? View.VISIBLE : View.GONE);
+	if (mClockStyle == STYLE_CLOCK_RIGHT && mShowClock)
             setVisibility(View.VISIBLE);
         else
             setVisibility(View.GONE);
     }
 
 }
-

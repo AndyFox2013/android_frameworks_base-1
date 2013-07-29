@@ -1,18 +1,18 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2008 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package com.android.systemui.statusbar.policy;
 
@@ -38,11 +38,8 @@ import android.view.ViewConfiguration;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.ImageView;
 
-import com.android.internal.util.ArrayUtils;
 import com.android.systemui.R;
 import com.android.systemui.statusbar.NavigationButtons;
-import com.android.systemui.statusbar.phone.NavbarEditor;
-import com.android.systemui.statusbar.phone.NavigationBarView;
 
 public class KeyButtonView extends ImageView {
     private static final String TAG = "StatusBar.KeyButtonView";
@@ -52,13 +49,15 @@ public class KeyButtonView extends ImageView {
 
     long mDownTime;
     int mCode;
+    boolean mIsSmall; 
     int mTouchSlop;
     Drawable mGlowBG;
     int mGlowWidth, mGlowHeight;
     float mGlowAlpha = 0f, mGlowScale = 1f, mDrawingAlpha = 1f;
-    boolean mSupportsLongpress = true;
+    boolean mSupportsLongPress = true;
     RectF mRect = new RectF(0f,0f,0f,0f);
     AnimatorSet mPressedAnim;
+    boolean mInEditMode;
 
     Runnable mCheckLongPress = new Runnable() {
         public void run() {
@@ -87,7 +86,7 @@ public class KeyButtonView extends ImageView {
 
         mCode = a.getInteger(R.styleable.KeyButtonView_keyCode, 0);
         
-        mSupportsLongpress = a.getBoolean(R.styleable.KeyButtonView_keyRepeat, true);
+        mSupportsLongPress = a.getBoolean(R.styleable.KeyButtonView_keyRepeat, true);
 
         mGlowBG = a.getDrawable(R.styleable.KeyButtonView_glowBackground);
         if (mGlowBG != null) {
@@ -185,7 +184,7 @@ public class KeyButtonView extends ImageView {
                 }
                 final AnimatorSet as = mPressedAnim = new AnimatorSet();
                 if (pressed) {
-                    if (mGlowScale < GLOW_MAX_SCALE_FACTOR) 
+                    if (mGlowScale < GLOW_MAX_SCALE_FACTOR)
                         mGlowScale = GLOW_MAX_SCALE_FACTOR;
                     if (mGlowAlpha < BUTTON_QUIESCENT_ALPHA)
                         mGlowAlpha = BUTTON_QUIESCENT_ALPHA;
@@ -209,39 +208,56 @@ public class KeyButtonView extends ImageView {
         super.setPressed(pressed);
     }
 
-    public void setInfo(NavigationButtons.ButtonInfo buttonInfo, boolean isVertical) {
-        setTag(buttonInfo);
+    public void setEditMode(boolean editMode) {
+        mInEditMode = editMode;
+        updateVisibility();
+    }
+
+    public void setInfo(NavigationButtons.ButtonInfo buttonInfo, boolean isVertical, boolean isSmall) { 
         final Resources res = getResources();
-        setContentDescription(res.getString(buttonInfo.contentDescription));
+        final int keyDrawableResId;
+
         mCode = buttonInfo.keyCode;
-        boolean isSmallButton = ArrayUtils.contains(NavbarEditor.smallButtonIds, getId());
-        Drawable keyD;
-        if (isSmallButton) {
-            keyD = res.getDrawable(buttonInfo.sideResource);
+        mIsSmall = isSmall;
+
+        setTag(buttonInfo);
+        setContentDescription(res.getString(buttonInfo.contentDescription));
+
+        if (isSmall) {
+            keyDrawableResId = buttonInfo.sideResource; 
         } else if (!isVertical) {
-            keyD = res.getDrawable(buttonInfo.portResource);
+            keyDrawableResId = buttonInfo.portResource; 
         } else {
-            keyD = res.getDrawable(buttonInfo.landResource);
+            keyDrawableResId = buttonInfo.landResource; 
         }
         //Reason for setImageDrawable vs setImageResource is because setImageResource calls relayout() w/o
         //any checks. setImageDrawable performs size checks and only calls relayout if necessary. We rely on this
         //because otherwise the setX/setY attributes which are post layout cause it to mess up the layout.
-        setImageDrawable(keyD);
+        
+	setImageDrawable(res.getDrawable(keyDrawableResId));
+        updateVisibility();
+    }
+
+    private void updateVisibility() {
+        if (mInEditMode) {
+            setVisibility(View.VISIBLE);
+            return;
+        }
+
+        NavigationButtons.ButtonInfo buttonInfo = (NavigationButtons.ButtonInfo) getTag(); 
         if (buttonInfo == NavigationButtons.EMPTY) {
-            if (isSmallButton) {
-                setVisibility(NavigationBarView.getEditMode() ? View.VISIBLE : View.INVISIBLE);
-            } else {
-                setVisibility(NavigationBarView.getEditMode() ? View.VISIBLE : View.GONE);
-            }
+            setVisibility(mIsSmall ? View.INVISIBLE : View.GONE); 
         } else if (buttonInfo == NavigationButtons.CONDITIONAL_MENU) {
-            setVisibility(NavigationBarView.getEditMode() ? View.VISIBLE : View.INVISIBLE);
-        } else if (buttonInfo == NavigationButtons.HOME) {
-            mSupportsLongpress = false;
+            setVisibility(View.INVISIBLE); 
         }
     }
 
+    private boolean supportsLongPress() {
+        return mSupportsLongPress && !NavigationButtons.HOME.equals(getTag());
+    } 
+
     public boolean onTouchEvent(MotionEvent ev) {
-        if (NavigationBarView.getEditMode()) {
+        if (mInEditMode) {
             return false;
         }
         final int action = ev.getAction();
@@ -258,7 +274,7 @@ public class KeyButtonView extends ImageView {
                     // Provide the same haptic feedback that the system offers for virtual keys.
                     performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 }
-                if (mSupportsLongpress) {
+                if (mSupportsLongPress) {
                     removeCallbacks(mCheckLongPress);
                     postDelayed(mCheckLongPress, ViewConfiguration.getLongPressTimeout());
                 }
@@ -276,7 +292,7 @@ public class KeyButtonView extends ImageView {
                 if (mCode != 0) {
                     sendEvent(KeyEvent.ACTION_UP, KeyEvent.FLAG_CANCELED);
                 }
-                if (mSupportsLongpress) {
+                if (mSupportsLongPress) {
                     removeCallbacks(mCheckLongPress);
                 }
                 break;
@@ -297,7 +313,7 @@ public class KeyButtonView extends ImageView {
                         performClick();
                     }
                 }
-                if (mSupportsLongpress) {
+                if (mSupportsLongPress) {
                     removeCallbacks(mCheckLongPress);
                 }
                 break;
@@ -320,5 +336,3 @@ public class KeyButtonView extends ImageView {
                 InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
     }
 }
-
-

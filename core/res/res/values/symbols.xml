@@ -295,6 +295,7 @@
   <java-symbol type="integer" name="config_lockSoundVolumeDb" />
   <java-symbol type="integer" name="config_multiuserMaximumUsers" />
   <java-symbol type="integer" name="config_safe_media_volume_index" />
+  <java-symbol type="integer" name="min_gesture_prediction_score" />
 
   <java-symbol type="color" name="tab_indicator_text_v4" />
 
@@ -863,6 +864,10 @@
   <java-symbol type="string" name="media_route_status_available" />
   <java-symbol type="string" name="media_route_status_not_available" />
   <java-symbol type="string" name="owner_name" />
+  <java-symbol type="string" name="policylab_enforceSelinux" />
+  <java-symbol type="string" name="policydesc_enforceSelinux" />
+  <java-symbol type="string" name="policylab_enforceMmac" />
+  <java-symbol type="string" name="policydesc_enforceMmac" />
 
   <java-symbol type="plurals" name="abbrev_in_num_days" />
   <java-symbol type="plurals" name="abbrev_in_num_hours" />
@@ -1162,6 +1167,8 @@
   <java-symbol type="style" name="Theme.DeviceDefault.Dialog.NoFrame" />
   <java-symbol type="style" name="Theme.IconMenu" />
   <java-symbol type="style" name="Theme.Panel.Volume" />
+  <java-symbol type="style" name="Theme.DeviceDefault.FloatingWindow" />
+  <java-symbol type="style" name="Theme.DeviceDefault.FloatingWindowLight" />
 
   <java-symbol type="attr" name="mediaRouteButtonStyle" />
   <java-symbol type="attr" name="externalRouteEnabledDrawable" />
@@ -1334,6 +1341,7 @@
   <java-symbol type="id" name="keyguard_click_area" />
   <java-symbol type="id" name="keyguard_selector_view" />
   <java-symbol type="id" name="keyguard_pattern_view" />
+  <java-symbol type="id" name="keyguard_gesture_view" />
   <java-symbol type="id" name="keyguard_password_view" />
   <java-symbol type="id" name="keyguard_pin_view" />
   <java-symbol type="id" name="keyguard_face_unlock_view" />
@@ -1349,6 +1357,7 @@
   <java-symbol type="id" name="keyguard_host_view" />
   <java-symbol type="id" name="delete_button" />
   <java-symbol type="id" name="lockPatternView" />
+  <java-symbol type="id" name="lockGestureView" />
   <java-symbol type="id" name="forgot_password_button" />
   <java-symbol type="id" name="glow_pad_view" />
   <java-symbol type="id" name="delete_button" />
@@ -1371,6 +1380,7 @@
   <java-symbol type="id" name="keyguard_selector_view_frame" />
   <java-symbol type="integer" name="config_carDockRotation" />
   <java-symbol type="integer" name="config_defaultUiModeType" />
+  <java-symbol type="integer" name="config_uiInvertedMode" />
   <java-symbol type="integer" name="config_deskDockRotation" />
   <java-symbol type="integer" name="config_lidKeyboardAccessibility" />
   <java-symbol type="integer" name="config_lidNavigationAccessibility" />
@@ -1393,6 +1403,7 @@
   <java-symbol type="layout" name="keyguard_screen_unlock_portrait" />
   <java-symbol type="layout" name="keyguard_selector_view" />
   <java-symbol type="layout" name="keyguard_pattern_view" />
+  <java-symbol type="layout" name="keyguard_gesture_view" />
   <java-symbol type="layout" name="keyguard_password_view" />
   <java-symbol type="layout" name="keyguard_pin_view" />
   <java-symbol type="layout" name="keyguard_face_unlock_view" />
@@ -1470,10 +1481,13 @@
   <java-symbol type="string" name="kg_emergency_call_label" />
   <java-symbol type="string" name="kg_forgot_pattern_button_text" />
   <java-symbol type="string" name="kg_wrong_pattern" />
+  <java-symbol type="string" name="kg_forgot_gesture_button_text" />
+  <java-symbol type="string" name="kg_wrong_gesture" />
   <java-symbol type="string" name="kg_wrong_password" />
   <java-symbol type="string" name="kg_wrong_pin" />
   <java-symbol type="string" name="kg_too_many_failed_attempts_countdown" />
   <java-symbol type="string" name="kg_pattern_instructions" />
+  <java-symbol type="string" name="kg_gesture_instructions" />
   <java-symbol type="string" name="kg_sim_pin_instructions" />
   <java-symbol type="string" name="kg_pin_instructions" />
   <java-symbol type="string" name="kg_password_instructions" />
@@ -1494,6 +1508,7 @@
   <java-symbol type="string" name="kg_login_checking_password" />
   <java-symbol type="string" name="kg_too_many_failed_pin_attempts_dialog_message" />
   <java-symbol type="string" name="kg_too_many_failed_pattern_attempts_dialog_message" />
+  <java-symbol type="string" name="kg_too_many_failed_gesture_attempts_dialog_message" />
   <java-symbol type="string" name="kg_too_many_failed_password_attempts_dialog_message" />
   <java-symbol type="string" name="kg_failed_attempts_almost_at_wipe" />
   <java-symbol type="string" name="kg_failed_attempts_now_wiping" />
@@ -1859,6 +1874,7 @@
   <java-symbol type="bool" name="config_intrusiveBatteryLed" />
   <java-symbol type="bool" name="config_multiColorBatteryLed" />
   <java-symbol type="array" name="notification_light_package_mapping" />
+  <java-symbol type="array" name="config_notificationNoAlertsVibePattern" /> 
 
   <!-- Power menu -->
   <java-symbol type="string" name="global_action_screenshot" />
@@ -1881,6 +1897,9 @@
   <!-- Profiles -->
   <java-symbol type="xml" name="profile_default" />
   <java-symbol type="string" name="wildcardProfile" />
+
+  <java-symbol type="string" name="profile_picker_title" />
+  <java-symbol type="string" name="profile_none" /> 
 
   <!-- Power widget -->
   <java-symbol type="string" name="hour" />
@@ -2001,4 +2020,15 @@
   <java-symbol type="dimen" name="pie_trigger_thickness" />
   <java-symbol type="dimen" name="pie_trigger_distance" />
   <java-symbol type="dimen" name="pie_perpendicular_distance" />
+
+  <!-- Electron Beam -->
+  <java-symbol type="bool" name="config_screenOffAnimation" />
+
+  <!-- Privacy Guard -->
+  <java-symbol type="string" name="privacy_guard_notification" />
+  <java-symbol type="string" name="privacy_guard_notification_detail" />
+  <java-symbol type="drawable" name="stat_notify_privacy_guard" /> 
+
+  <!-- Irda Service -->	
+  <java-symbol type="bool" name="config_enableIrdaManagerService" />
 </resources>

@@ -17,10 +17,12 @@
 package com.android.systemui.statusbar;
 
 import android.app.Notification;
+import android.graphics.Bitmap;
 import android.os.IBinder;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.android.systemui.statusbar.BaseStatusBar.NotificationClicker;
 import com.android.internal.statusbar.StatusBarNotification;
 import com.android.systemui.R;
 
@@ -39,12 +41,21 @@ public class NotificationData {
         public View content; // takes the click events and sends the PendingIntent
         public View expanded; // the inflated RemoteViews
         public ImageView largeIcon;
+	protected boolean hide = false;
+        protected Bitmap roundIcon;
         protected View expandedLarge;
+	protected NotificationClicker floatingIntent;
         public Entry() {}
         public Entry(IBinder key, StatusBarNotification n, StatusBarIconView ic) {
             this.key = key;
             this.notification = n;
             this.icon = ic;
+        }
+	public Entry(IBinder key, StatusBarNotification n, StatusBarIconView ic, Bitmap ri) {
+            this.key = key;
+            this.notification = n;
+            this.icon = ic;
+            this.roundIcon = ri;
         }
         public void setLargeView(View expandedLarge) {
             this.expandedLarge = expandedLarge;
@@ -52,6 +63,12 @@ public class NotificationData {
         }
         public View getLargeView() {
             return expandedLarge;
+        }
+	public NotificationClicker getFloatingIntent() {
+            return floatingIntent;
+        }
+        public Bitmap getRoundIcon() {
+            return roundIcon;
         }
         /**
          * Return whether the entry can be expanded.
@@ -65,6 +82,12 @@ public class NotificationData {
         public boolean userExpanded() {
             return NotificationData.getUserExpanded(row);
         }
+	/**
+         * Return whether the entry has been manually cleared by the user.
+         */
+        public boolean userCleared() {
+            return NotificationData.getUserCleared(row);
+        } 
         /**
          * Set the flag indicating that this was manually expanded by the user.
          */
@@ -227,4 +250,18 @@ public class NotificationData {
     public static boolean setUserLocked(View row, boolean userLocked) {
         return writeBooleanTag(row, R.id.user_lock_tag, userLocked);
     }
+
+    /**
+     * Return whether the entry was cleared by the user.
+     */
+    public static boolean getUserCleared(View row) {
+        return readBooleanTag(row, R.id.user_cleared_tag);
+    }
+
+    /**
+     * Set whether the entry is being touched by the user.
+     */
+    public static boolean setUserCleared(View row) {
+        return writeBooleanTag(row, R.id.user_cleared_tag, true);
+    } 
 }
