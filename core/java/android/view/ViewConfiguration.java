@@ -18,6 +18,7 @@ package android.view;
 
 import android.app.AppGlobals;
 import android.content.Context;
+import android.content.ContentResolver;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Point;
@@ -221,7 +222,7 @@ public class ViewConfiguration {
     private final boolean mFadingMarqueeEnabled;
 
     private boolean sHasPermanentMenuKey;
-    private boolean sHasPermanentMenuKeySet;
+    private boolean sHasPermanentMenuKeySet; 
 
     private Context mContext;
 
@@ -300,7 +301,7 @@ public class ViewConfiguration {
             } catch (RemoteException ex) {
                 sHasPermanentMenuKey = false;
             }
-        }
+        } 
 
         mFadingMarqueeEnabled = res.getBoolean(
                 com.android.internal.R.bool.config_ui_enableFadingMarquee);
@@ -682,17 +683,25 @@ public class ViewConfiguration {
      * @return true if a permanent menu key is present, false otherwise.
      */
     public boolean hasPermanentMenuKey() {
-        // The action overflow button within app UI can
-        // be controlled with a system setting
-        int showOverflowButton = Settings.System.getInt(
-                mContext.getContentResolver(),
-                Settings.System.UI_FORCE_OVERFLOW_BUTTON, 0);
-        if (showOverflowButton == 1) {
-            // Force overflow button on by reporting that
-            // the device has no permanent menu key
+        // Report no menu key if only soft buttons are available
+        if (!sHasPermanentMenuKey) {
+            return false; 
+        }
+
+        // Report no menu key if overflow button is forced to enabled
+        ContentResolver res = mContext.getContentResolver();
+        boolean forceOverflowButton = Settings.System.getInt(res,
+                Settings.System.UI_FORCE_OVERFLOW_BUTTON, 0) == 1;
+        if (forceOverflowButton) { 
             return false;
-        } else {
-            return sHasPermanentMenuKey;
+        }
+
+        // Report menu key presence based on hardware key rebinding
+	IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+        try {
+            return wm.hasMenuKeyEnabled();
+        } catch (RemoteException ex) {
+            return sHasPermanentMenuKey; 
         }
     }
 

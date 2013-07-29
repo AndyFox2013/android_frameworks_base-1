@@ -158,11 +158,11 @@
     <!-- Height of the notification panel header bar -->
     <dimen name="notification_panel_header_height">48dp</dimen>
 
+    <!-- Height of the notification panel brightness slider -->
+    <dimen name="notification_panel_brightness_height">42dp</dimen>
+
     <!-- Height of the notification panel widget bar -->
     <dimen name="notification_panel_widget_height">48dp</dimen>
-
-    <!-- Height of the notification panel header and widget -->
-    <dimen name="notification_panel_header_and_widget">96dp</dimen>
 
     <!-- Extra space above the panel -->
     <dimen name="notification_panel_padding_top">0dp</dimen>
@@ -237,4 +237,31 @@
 
     <dimen name="pie_sysinfo_radius">165dp</dimen>
     <dimen name="pie_sysinfo_height">85sp</dimen>
+
+    <dimen name="halo_bubble_size">75dp</dimen>
+    <dimen name="halo_number_size">24dp</dimen>
+    <dimen name="halo_number_icon_size">18dp</dimen>
+    <dimen name="halo_number_text_size">14sp</dimen>
+    <dimen name="halo_speech_text_size">15sp</dimen>
+    <dimen name="halo_speech_hpadding_short">10dp</dimen>
+    <dimen name="halo_speech_hpadding_wide">18dp</dimen>
+    <dimen name="halo_speech_vpadding_top">7dp</dimen>
+    <dimen name="halo_speech_vpadding_bottom">7dp</dimen>
+    <dimen name="halo_content_max_width">250dp</dimen>
+
+    <!-- App sidebar -->
+    <dimen name="app_sidebar_item_size">60dp</dimen>
+    <dimen name="app_sidebar_item_padding">2dp</dimen>
+    <dimen name="tab_width">16dp</dimen>
+    <dimen name="tab_height">32dp</dimen>
+
+    <dimen name="drag_item_size">80dp</dimen>
+    <dimen name="icon_size">48dp</dimen>
+    <dimen name="item_title_text_size">12sp</dimen>
+    <dimen name="item_above_below_delta">16dp</dimen>
+    <dimen name="folder_padding">0dp</dimen>
+    <dimen name="folder_name_padding">10dp</dimen>
+    <dimen name="folder_width">290dp</dimen>
+    <dimen name="folder_height">480dp</dimen>
+    <dimen name="setup_sidebar_width">90dp</dimen>
 </resources>
